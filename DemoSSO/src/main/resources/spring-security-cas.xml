@@ -1,0 +1,117 @@
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+       xmlns:beans="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.1.xsd
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd
+       http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.1.xsd
+       http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.2.xsd ">	
+ 
+	<debug/>
+       
+	<!--将启动基于表达式的语法 -->
+	<global-method-security access-decision-manager-ref="accessDecisionManager" pre-post-annotations="enabled" />
+
+	<!-- 不拦截 -->
+	<http pattern="/static/**" security="none" />
+	<http pattern="/" security="none" />
+	<http pattern="/login" security="none" />
+	<http pattern="/timeout" security="none" />
+	<http pattern="/logout" security="none" />
+	<http pattern="/common/error403" security="none" />
+	<http pattern="/common/timeout" security="none" />
+	
+	<!-- <http security="none" pattern="/index.zul"/>-->
+	<!-- 让casAuthenticationEntryPoint来处理拦截的全部URL. CAS_FILTER需要被这事在正确的位置 -->
+	<http auto-config="true" entry-point-ref="casAuthenticationEntryPoint" use-expressions="true" access-denied-page="/common/error403">
+		<intercept-url pattern="/**/*" access="isAuthenticated()" />
+		<anonymous enabled="false" />
+		<logout logout-url="/j_spring_cas_security_logout" logout-success-url="https://cas.demo.com:8443/cas/logout?service=http://sso.demo.com:9999/DemoSSO"  />
+		<custom-filter position="CAS_FILTER" ref="casAuthenticationFilter"/>
+ 		<session-management invalid-session-url="/common/timeout">
+			<concurrency-control max-sessions="1" error-if-maximum-exceeded="false" expired-url="/common/timeout" />
+		</session-management>
+	</http>
+	
+	<!-- Required for the casProcessingFilter, so define it explicitly set and 
+	specify an Id Even though the authenticationManager is created by default 
+	when namespace based config is used. -->
+	<authentication-manager alias="authenticationManager">
+		<!-- 该认证提供者用于cas登录-->
+		<authentication-provider ref="casAuthenticationProvider"/>
+	</authentication-manager>
+	
+	<!-- This section is used to configure CAS. The service is the actual redirect 
+		that will be triggered after the CAS login sequence. -->	
+	<beans:bean id="serviceProperties" class="org.springframework.security.cas.ServiceProperties">
+	    <beans:property name="service" value="http://sso.demo.com:9999/DemoSSO/j_spring_cas_security_check"/>
+	    <beans:property name="sendRenew" value="false"/>
+	</beans:bean>
+	
+	<!-- The CAS filter handles the redirect from the CAS server and starts 
+		the ticket validation. -->
+	<beans:bean id="casAuthenticationFilter" class="org.springframework.security.cas.web.CasAuthenticationFilter">
+<!-- 		<beans:property name="serviceProperties" ref="serviceProperties"/> -->
+	    <beans:property name="authenticationManager" ref="authenticationManager"/>
+<!-- 	    <beans:property name="sessionAuthenticationStrategy" ref="sessionAuthenticationStrategy"/> -->
+	</beans:bean>
+	
+	<!-- The entryPoint intercepts all the CAS authentication requests. It redirects 
+		to the CAS loginUrl for the CAS login page. -->
+	<beans:bean id="casAuthenticationEntryPoint" class="org.springframework.security.cas.web.CasAuthenticationEntryPoint">
+		<beans:property name="loginUrl" value="https://cas.demo.com:8443/cas/login" />
+		<beans:property name="serviceProperties" ref="serviceProperties" />
+	</beans:bean>
+	
+	<beans:bean id="casAuthenticationUserDetailsService" class="org.springframework.security.core.userdetails.UserDetailsByNameServiceWrapper">
+		<beans:property name="userDetailsService" ref="userService" />
+	</beans:bean>
+	<!-- Handles the CAS ticket processing. -->
+	<beans:bean id="casAuthenticationProvider" class="org.springframework.security.cas.authentication.CasAuthenticationProvider">
+		<beans:property name="authenticationUserDetailsService" ref="casAuthenticationUserDetailsService"/>
+		<beans:property name="serviceProperties" ref="serviceProperties"/>
+		<beans:property name="ticketValidator">
+			<beans:bean class="org.jasig.cas.client.validation.Cas20ServiceTicketValidator">
+				<beans:constructor-arg index="0" value="https://cas.demo.com:8443/cas">
+				</beans:constructor-arg>
+			</beans:bean>
+		</beans:property>
+		<beans:property name="key" value="cas"></beans:property>
+	</beans:bean>
+	
+	<!-- AffirmativeBased表示只要有一个Voter通过权限要求，就可以访问 -->
+	<beans:bean id="accessDecisionManager" class="org.springframework.security.access.vote.AffirmativeBased">
+		<!-- 是否允许所有的投票者弃权,如果为false，表示如果所有的投票者弃权，就禁止访问 -->
+		<beans:property name="allowIfAllAbstainDecisions" value="false" />
+		<beans:property name="decisionVoters">
+			<beans:list>
+				<beans:bean class="org.springframework.security.access.prepost.PreInvocationAuthorizationAdviceVoter">
+					<beans:constructor-arg ref="expressionBasedPreInvocationAdvice" />
+				</beans:bean>
+				<!-- RoleVoter默认角色名称都要以ROLE_开头，否则不会被计入权限控制，如果要修改前缀，可以通过对rolePrefix属性进行修改 -->
+				<beans:bean class="org.springframework.security.access.vote.RoleVoter">
+					<beans:property name="rolePrefix" value="" />
+				</beans:bean>
+			</beans:list>
+		</beans:property>
+	</beans:bean>	
+	
+	<beans:bean id="expressionBasedPreInvocationAdvice" class="org.springframework.security.access.expression.method.ExpressionBasedPreInvocationAdvice">
+		<beans:property name="expressionHandler" ref="expressionHandler" />
+	</beans:bean>
+	<beans:bean id="expressionHandler" class="org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler" />	
+	
+<!-- 	<beans:bean id="testFilter" class="com.demo.subsystem.common.TestFilter" /> -->
+
+	<user-service id="userService">
+		<user name="guest" password="guest" authorities="ROLE_USER, ROLE_ADMIN" />
+		<user name="user" password="user" authorities="ROLE_USER, ROLE_ADMIN" />
+	</user-service>
+    
+</beans:beans>

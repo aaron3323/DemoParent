@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.demo.subsystem.demo.mapper.DeptMapper" >
+	<cache eviction="FIFO" flushInterval="60000" size="512" readOnly="true" />
+	<!-- 基本映射 -->
+  <resultMap id="BaseResultMap" type="com.demo.subsystem.demo.mapper.Dept" >
+    <id column="id" property="id" jdbcType="VARCHAR" />
+    <result column="deptname" property="deptname" jdbcType="VARCHAR" />
+  </resultMap>
+
+	<!-- 一对多关联映射(一) -->
+  <resultMap id="OneToManyResultMap" type="com.demo.subsystem.demo.mapper.Dept" >
+    <id column="id" property="id" jdbcType="VARCHAR" />
+    <result column="deptname" property="deptname" jdbcType="VARCHAR" />
+    <collection property="userList" column="id" javaType="ArrayList" select="com.demo.subsystem.demo.mapper.UserMapper.findByDeptId" />
+  </resultMap>
+  
+  <sql id="Base_Column_List" >
+    id, deptname
+  </sql>
+  
+	<!-- 按id查 -->
+	<select id="findById" parameterType="java.lang.String" resultType="com.demo.subsystem.demo.mapper.Dept">
+		select id, deptname from dept where id = #{id,jdbcType=VARCHAR}
+	</select>
+
+	<!-- 一对多 -->
+  <select id="findOneToMany" parameterType="java.lang.String" resultMap="OneToManyResultMap" >
+    select id, deptname from dept where id = #{id,jdbcType=VARCHAR}
+  </select>
+
+</mapper>

@@ -1,0 +1,73 @@
+后台管理在线用户数，websocket实现
+websocket图表
+pagehelper
+dbutils查询一个字段
+spring data
+Spring IO Platform
+spring-batch
+Spring Integration
+Spring Web Services
+spring-loaded
+java to rpm
+表单验证
+tomcat session复制
+启动信息：Set web app root system property: 'webapp.root'
+第三方应用授权
+Hawt IO
+
+
+如果数据库中的资源出现的变化，需要刷新内存中已加载的资源信息时，使用下面代码：
+
+<%@page import="org.springframework.context.ApplicationContext"%>
+<%@page import="org.springframework.web.context.support.WebApplicationContextUtils"%>
+<%@page import="org.springframework.beans.factory.FactoryBean"%>
+<%@page import="org.springframework.security.web.access.intercept.FilterSecurityInterceptor"%>
+<%@page import="org.springframework.security.web.access.intercept.FilterInvocationSecurityMetadataSource"%>
+<%
+    ApplicationContext ctx =  WebApplicationContextUtils.getWebApplicationContext(application);
+    FactoryBean factoryBean = (FactoryBean) ctx.getBean("&filterInvocationSecurityMetadataSource");
+    FilterInvocationSecurityMetadataSource fids = (FilterInvocationSecurityMetadataSource) factoryBean.getObject();
+    FilterSecurityInterceptor filter = (FilterSecurityInterceptor) ctx.getBean("filterSecurityInterceptor");
+    filter.setSecurityMetadataSource(fids);
+%>
+<jsp:forward page="/"/>
+
+
+
+
+
+
+
+获取当前用户信息
+
+如果只是想从页面上显示当前登陆的用户名，可以直接使用Spring Security提供的taglib。
+
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
+<div>username : <sec:authentication property="name"/></div>
+        
+如果想在程序中获得当前登陆用户对应的对象。
+
+UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext()
+    .getAuthentication()
+    .getPrincipal();
+        
+如果想获得当前登陆用户所拥有的所有权限。
+
+Collection<GrantedAuthority> authorities = (Collection<GrantedAuthority>) userDetails.getAuthorities();
+
+
+
+
+
+
+
+判断用户是否登录
+
+有些情况，只要用户登录就可以访问某些资源，而不需要具体要求用户拥有哪些权限，这时候可以使用IS_AUTHENTICATED_FULLY，配置如下所示：
+
+<http auto-config='true'>
+    <intercept-url pattern="/admin.jsp" access="ROLE_ADMIN" />
+    <intercept-url pattern="/**" access="IS_AUTHENTICATED_FULLY" />
+</http>
+    
+这样除了/admin.jsp之外所有的URL，只要是登录用户就可以访问了。

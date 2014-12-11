@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.demo.subsystem.demo.mapper.UserMapper" >
+	<cache eviction="FIFO" flushInterval="60000" size="512" readOnly="true" />
+	<!-- 基本映射 -->
+  <resultMap id="BaseResultMap" type="com.demo.subsystem.demo.mapper.User" >
+    <id column="id" property="id" jdbcType="VARCHAR" />
+    <result column="username" property="username" jdbcType="VARCHAR" />
+    <result column="password" property="password" jdbcType="VARCHAR" />
+    <result column="mail" property="mail" jdbcType="VARCHAR" />
+    <result column="deptId" property="deptId" jdbcType="VARCHAR" />    
+  </resultMap>
+  
+	<!-- 左外链接关联映射 -->
+  <resultMap id="LeftJoinResultMap" type="com.demo.subsystem.demo.mapper.User" >
+    <id column="id" property="id" jdbcType="VARCHAR" />
+    <result column="username" property="username" jdbcType="VARCHAR" />
+    <result column="password" property="password" jdbcType="VARCHAR" />
+    <result column="mail" property="mail" jdbcType="VARCHAR" />
+	<association property="dept" column="deptId" javaType="com.demo.subsystem.demo.mapper.Dept">
+		<id column="id" property="id"/>
+		<result column="deptname" property="deptname"/>  
+	</association>
+  </resultMap>
+  
+	<!-- 一对一关联映射 -->
+  <resultMap id="OneToOneResultMap" type="com.demo.subsystem.demo.mapper.User" >
+    <id column="id" property="id" jdbcType="VARCHAR" />
+    <result column="username" property="username" jdbcType="VARCHAR" />
+    <result column="password" property="password" jdbcType="VARCHAR" />
+    <result column="mail" property="mail" jdbcType="VARCHAR" />
+    <result column="deptId" property="deptId" jdbcType="VARCHAR" />    
+    <association property="dept" column="deptId" select="com.demo.subsystem.demo.mapper.DeptMapper.findById" />
+  </resultMap>
+
+	<!-- 一对多关联映射 -->
+<!--   <resultMap id="OneToManyResultMap" type="com.demo.subsystem.demo.mapper.User" > -->
+<!--     <id column="id" property="id" jdbcType="VARCHAR" /> -->
+<!--     <result column="username" property="username" jdbcType="VARCHAR" /> -->
+<!--     <result column="password" property="password" jdbcType="VARCHAR" /> -->
+<!--     <result column="mail" property="mail" jdbcType="VARCHAR" /> -->
+<!--     <collection property="ordersList" column="id" javaType="ArrayList" ofType="Student" select="StudentDao.getStudentByClassID" /> -->
+<!--   </resultMap> -->
+<!-- 	<select id="selectUserOrders" parameterType="java.lang.String" resultType="com.demo.subsystem.demo.mapper.Orders" >   -->
+<!-- 		select id, name from orders where id=#{id,jdbcType=VARCHAR} -->
+<!-- 	</select>   -->
+  
+  
+	<!-- sql标签用来定义一些可以被重用的sql语句或字段或片段等 -->  
+  <sql id="Example_Where_Clause" >
+    <where >
+      <foreach collection="oredCriteria" item="criteria" separator="or" >
+        <if test="criteria.valid" >
+          <trim prefix="(" suffix=")" prefixOverrides="and" >
+            <foreach collection="criteria.criteria" item="criterion" >
+              <choose >
+                <when test="criterion.noValue" >
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue" >
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue" >
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue" >
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator="," >
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List" >
+    id, username, password, mail
+  </sql>
+  <sql id="Base_Pagination_List" >
+    limit #{start} ,#{size}
+  </sql>
+  
+	<!-- 左外链接 -->
+  <select id="findLeftJoin" resultMap="LeftJoinResultMap" >
+		select u.id, u.username, d.id, d.deptname from User u LEFT JOIN dept d on u.deptId= d.id
+  </select>
+
+	<!-- 增 -->
+  <insert id="insert" parameterType="com.demo.subsystem.demo.mapper.User" >
+    insert into User (id, username, password, mail, deptId)
+    values (#{id,jdbcType=VARCHAR}, #{username,jdbcType=VARCHAR},#{password,jdbcType=VARCHAR}, #{mail,jdbcType=VARCHAR}, #{deptId,jdbcType=VARCHAR})
+  </insert>
+
+	<!-- 批量增 -->
+	<!--传入集合：collection="list"-->
+	<!--传入数组：collection="array"-->
+	<insert id="insertBatch" parameterType="java.util.List">    
+		insert into User (id, username, password, mail, deptId)
+		values  
+		<foreach collection="list" item="item" index="index" separator="," >  
+		    (#{item.id,jdbcType=VARCHAR}, #{item.username,jdbcType=VARCHAR},#{item.password,jdbcType=VARCHAR}, #{item.mail,jdbcType=VARCHAR}, #{item.deptId,jdbcType=VARCHAR})  
+		</foreach>  
+	</insert>
+  
+	<!--  删 -->
+  <delete id="delete" parameterType="java.lang.String" >
+    delete from User
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  
+	<!-- 改 -->
+  <update id="update" parameterType="com.demo.subsystem.demo.mapper.User" >
+    update User 
+    <set>
+		<if test="username != null">  
+		    username = #{username},  
+		</if>  
+		<if test="password != null">  
+		    password = #{password},  
+		</if>  
+		<if test="mail != null">  
+		    mail = #{mail},  
+		</if>  
+		<if test="deptId != null">  
+		    deptId = #{deptId}  
+		</if>    
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  
+	<!-- 查总数 -->
+  <select id="count" resultType="java.lang.Integer">
+    select count(id) from User
+  </select>
+  
+	<!-- 一对一 -->
+  <select id="findOneToOne" parameterType="java.lang.String" resultMap="OneToOneResultMap" >
+    select * from User where id = #{id,jdbcType=VARCHAR}
+  </select>
+  
+	<!-- 按id查 -->
+  <select id="findById" parameterType="java.lang.String" resultType="com.demo.subsystem.demo.mapper.User" >
+    select * from User where id = #{id,jdbcType=VARCHAR}
+  </select>
+  
+	<!-- 按deptid查 -->
+	<!-- 一对多关联映射(多) -->
+  <select id="findByDeptId" parameterType="java.lang.String" resultType="com.demo.subsystem.demo.mapper.User" >
+    select * from User where deptId = #{deptId,jdbcType=VARCHAR}
+  </select>
+  
+	<!-- 按条件查 -->
+  <select id="find" parameterType="com.demo.subsystem.demo.mapper.User" resultType="com.demo.subsystem.demo.mapper.User" >
+    select * from User
+    <where>
+		<if test="id != null">  
+		    id = #{id}  
+		</if>  
+		<if test="username != null">  
+		    and username = #{username}  
+		</if>    
+		<if test="password != null">  
+		    and password = #{password}  
+		</if>    
+		<if test="mail != null">  
+		    and mail = #{mail}  
+		</if>    
+		<if test="deptId != null">  
+		    and deptId = #{deptId}  
+		</if>    
+    </where>
+  </select>
+  
+	<!-- 查所有 -->
+  <select id="findAll" resultType="com.demo.subsystem.demo.mapper.User" >
+    select * from User
+  </select>
+  
+	<!-- 分页 -->
+  <select id="findPage" parameterType="com.demo.subsystem.demo.entity.DemoQueryParam" resultType="com.demo.subsystem.demo.mapper.User" >
+    select * from User
+    <where>
+	    <if test="user != null">
+			<if test="user.id != null">  
+			    id = #{user.id}  
+			</if>  
+			<if test="user.username != null">  
+			    and username = #{user.username}  
+			</if>    
+			<if test="user.password != null">  
+			    and password = #{user.password}  
+			</if>    
+			<if test="user.mail != null">  
+			    and mail = #{user.mail}  
+			</if>    
+			<if test="user.deptId != null">  
+			    and deptId = #{user.deptId}  
+			</if>    
+	    </if>
+    </where>
+    <include refid="Base_Pagination_List" />
+  </select>
+
+  <select id="selectByExample" resultMap="BaseResultMap" parameterType="com.demo.subsystem.demo.mapper.UserExample" >
+    select
+    <if test="distinct" >
+      distinct
+    </if>
+    <include refid="Base_Column_List" />
+    from User
+    <if test="_parameter != null" >
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null" >
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.String" >
+    select 
+    <include refid="Base_Column_List" />
+    from User
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <insert id="insertSelective" parameterType="com.demo.subsystem.demo.mapper.User" >
+    insert into User
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        id,
+      </if>
+      <if test="username != null" >
+        username,
+      </if>
+      <if test="password != null" >
+        password,
+      </if>
+      <if test="mail != null" >
+        mail,
+      </if>
+      <if test="deptId != null" >
+        deptId,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="username != null" >
+        #{username,jdbcType=VARCHAR},
+      </if>
+      <if test="password != null" >
+        #{password,jdbcType=VARCHAR},
+      </if>
+      <if test="mail != null" >
+        #{mail,jdbcType=VARCHAR},
+      </if>
+      <if test="deptId != null" >
+        #{deptId,jdbcType=VARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.demo.subsystem.demo.mapper.User" >
+    update User
+    <set >
+      <if test="username != null" >
+        username = #{username,jdbcType=VARCHAR},
+      </if>
+      <if test="password != null" >
+        password = #{password,jdbcType=VARCHAR},
+      </if>
+      <if test="mail != null" >
+        mail = #{mail,jdbcType=VARCHAR},
+      </if>
+      <if test="deptId != null" >
+        deptId = #{deptId,jdbcType=VARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+</mapper>
