@@ -47,7 +47,7 @@ public class AuthorizationAccessDecisionManager implements AccessDecisionManager
 		}
 		
 		//没有访问权限
-		throw new AccessDeniedException("No Access Dendied");
+		throw new AccessDeniedException("Access is denied");
 	}
 
 	@Override
