@@ -24,12 +24,12 @@
 	<http pattern="/login" security="none" />
 	<http pattern="/timeout" security="none" />
 	<http pattern="/logout" security="none" />
-	<http pattern="/common/error403" security="none" />
-	<http pattern="/common/timeout" security="none" />
+	<http pattern="/common/**" security="none" />
 	
 	<!-- <http security="none" pattern="/index.zul"/>-->
 	<!-- 让casAuthenticationEntryPoint来处理拦截的全部URL. CAS_FILTER需要被这事在正确的位置 -->
 	<http auto-config="true" entry-point-ref="casAuthenticationEntryPoint" use-expressions="true" access-denied-page="/common/error403">
+		<intercept-url pattern="/main" access="hasRole('ROLE_ADMIN')" />
 		<intercept-url pattern="/**/*" access="isAuthenticated()" />
 		<anonymous enabled="false" />
 		<logout logout-url="/j_spring_cas_security_logout" logout-success-url="https://cas.demo.com:8443/cas/logout?service=http://sso.demo.com:9999/DemoSSO"  />
@@ -85,6 +85,7 @@
 		<beans:property name="key" value="cas"></beans:property>
 	</beans:bean>
 	
+	<!-- 访问决策器 -->
 	<!-- AffirmativeBased表示只要有一个Voter通过权限要求，就可以访问 -->
 	<beans:bean id="accessDecisionManager" class="org.springframework.security.access.vote.AffirmativeBased">
 		<!-- 是否允许所有的投票者弃权,如果为false，表示如果所有的投票者弃权，就禁止访问 -->
